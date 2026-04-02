@@ -1,0 +1,130 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+
+	"project-scanner/src"
+)
+
+func main() {
+	const version = "206-04-02" // software version
+
+	// ── Static flags ──────────────────────────────────────────────────────────
+	root := flag.String("root", ".", "Root directory to scan")
+	maxDepth := flag.Int("depth", 5, "Maximum folder depth (0 = root only)")
+	configPath := flag.String("config", "config.json", "Path to the JSON configuration file")
+
+	// ── Load config (before parsing remaining flags) ──────────────────────────
+	// We do a pre-parse to get -config if supplied, then load the config file,
+	// then register dynamic flags, then do the final parse.
+	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
+	_ = flag.CommandLine.Parse(os.Args[1:]) // first pass — static flags only
+
+	cfg, err := src.LoadConfig(*configPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "❌ %v\n", err)
+		os.Exit(1)
+	}
+
+	// ── Dynamic flags from config ─────────────────────────────────────────────
+	// For each filterable field we register one or two flags:
+	//   - date_range → -<slug>-before  and  -<slug>-after
+	//   - exact      → -<slug>
+	//
+	// "slug" is the JSON key lowercased with underscores replaced by dashes.
+
+	type dynFlag struct {
+		field    src.FieldConfig
+		before   *string
+		after    *string
+		exact    *string
+		contains *string
+	}
+	var dynFlags []dynFlag
+
+	for _, f := range cfg.FilterableFields() {
+		slug := strings.ToLower(strings.ReplaceAll(f.JSONKey, "_", "-"))
+		df := dynFlag{field: f}
+
+		switch f.Filter {
+		case src.FilterDateRange:
+			df.before = flag.String(slug+"-before", "", fmt.Sprintf("Keep projects whose %s is before YYYY-MM-DD", f.JSONKey))
+			df.after = flag.String(slug+"-after", "", fmt.Sprintf("Keep projects whose %s is after YYYY-MM-DD", f.JSONKey))
+		case src.FilterExact:
+			df.exact = flag.String(slug, "", fmt.Sprintf("Filter by %s (exact match, case-insensitive)", f.JSONKey))
+		case src.FilterContains:
+			df.contains = flag.String(slug, "", fmt.Sprintf("Filter by %s (substring match, case-insensitive)", f.JSONKey))
+		}
+		dynFlags = append(dynFlags, df)
+	}
+
+	// Custom usage
+	flag.Usage = func() {
+		fmt.Fprint(os.Stderr, `
+╔══════════════════════════════════════════════════════════════╗
+║    Project Scanner v`+version+` - ©Fréderic Pont - Gnu GPL     ║
+╚══════════════════════════════════════════════════════════════╝
+
+Usage: project-scanner [options]
+
+Options:
+`)
+		flag.PrintDefaults()
+		fmt.Fprint(os.Stderr, `
+Examples:
+  project-scanner -root ./data
+  project-scanner -root ./data -depth 3 -config myconfig.json
+  project-scanner -root ./data -project-status ongoing
+  project-scanner -root ./data -project-published false
+  project-scanner -root ./data -end-date-before 2025-01-01
+  project-scanner -root ./data -end-date-after 2024-01-01
+`)
+	}
+
+	// Second parse — picks up dynamic flags now that they are registered.
+	flag.Parse()
+
+	// ── Build FilterSet ───────────────────────────────────────────────────────
+	var filterSet src.FilterSet
+	for _, df := range dynFlags {
+		ff := src.FieldFilter{JSONKey: df.field.JSONKey}
+		switch df.field.Filter {
+		case src.FilterDateRange:
+			ff.Before = *df.before
+			ff.After = *df.after
+		case src.FilterExact:
+			ff.Exact = *df.exact
+		case src.FilterContains:
+			ff.Contains = *df.contains
+		}
+		// Only add to the set if at least one value is set
+		if ff.Before != "" || ff.After != "" || ff.Exact != "" || ff.Contains != "" {
+			filterSet = append(filterSet, ff)
+		}
+	}
+
+	// ── Scan ──────────────────────────────────────────────────────────────────
+	fmt.Printf("\033[36;1m🔍\033[0m Scanning \033[1m%s\033[0m (max depth: %d)…\n", *root, *maxDepth)
+
+	projects, warnings := src.ScanProjects(*root, *maxDepth)
+	for _, w := range warnings {
+		fmt.Printf("\033[33m%s\033[0m\n", w)
+	}
+	fmt.Printf("\033[36m📁\033[0m Found \033[1m%d\033[0m project(s)\n", len(projects))
+
+	// ── Filter ────────────────────────────────────────────────────────────────
+	filtered := src.Apply(projects, filterSet)
+	fmt.Printf("\033[36m🎯\033[0m Matching filter(s): \033[1;32m%d\033[0m project(s)\n\n", len(filtered))
+
+	if len(filtered) == 0 {
+		fmt.Println("\033[33mNo projects match the current filters.\033[0m")
+		return
+	}
+
+	// ── Render ────────────────────────────────────────────────────────────────
+	src.PrintTable(filtered, cfg)
+	fmt.Printf("\n\033[1m%d result(s)\033[0m\n", len(filtered))
+}
