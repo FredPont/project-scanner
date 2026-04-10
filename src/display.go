@@ -10,15 +10,15 @@ import (
 // ─────────────────────────────────────────────
 
 const (
-	reset   = "\033[0m"
-	bold    = "\033[1m"
-	red     = "\033[31m"
-	green   = "\033[32m"
-	yellow  = "\033[33m"
-	cyan    = "\033[36m"
-	white   = "\033[37m"
-	bgBlue  = "\033[44m"
-	bgGrey  = "\033[100m"
+	reset  = "\033[0m"
+	bold   = "\033[1m"
+	red    = "\033[31m"
+	green  = "\033[32m"
+	yellow = "\033[33m"
+	cyan   = "\033[36m"
+	white  = "\033[37m"
+	bgBlue = "\033[44m"
+	bgGrey = "\033[100m"
 )
 
 func col(c, s string) string { return c + s + reset }
@@ -42,6 +42,8 @@ func renderValue(cfg FieldConfig, raw string) string {
 		return statusColored(raw, cfg.ColWidth)
 	case "Project_published":
 		return publishedLabel(raw == "true")
+	case "Unresponsive_to_transfer_email":
+		return unresponsiveLabel(raw == "true")
 	default:
 		return truncate(raw, cfg.ColWidth)
 	}
@@ -66,6 +68,13 @@ func publishedLabel(pub bool) string {
 		return col(green, "✔ yes")
 	}
 	return col(red, "✘ no")
+}
+
+func unresponsiveLabel(unresponsive bool) string {
+	if unresponsive {
+		return col(red, "✘ yes")
+	}
+	return col(green, "✔ no")
 }
 
 // ─────────────────────────────────────────────
