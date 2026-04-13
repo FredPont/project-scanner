@@ -98,15 +98,23 @@ func unresponsiveLabel(unresponsive bool) string {
 
 const pathColWidth = 50
 
-// totalWidth computes the full table width from the config.
+// totalWidth computes the exact printed width of a table row:
+// 1 leading space + PATH col + one space per extra col + each col width.
 func totalWidth(cols []FieldConfig) int {
-	w := 1 + pathColWidth + 1 // leading space + PATH col + space
+	w := 1 + pathColWidth // leading space + PATH col
 	for _, c := range cols {
-		w += c.ColWidth + 1
+		w += 1 + c.ColWidth // separator space + col content
 	}
 	return w
 }
 
+// visibleLen returns the visible character count of a string,
+// ignoring ANSI escape codes. Uses rune count to handle multibyte glyphs.
+func visibleLen(s string) int {
+	return len([]rune(stripANSI(s)))
+}
+
+// tableSeparator prints a full-width separator line matching the table width.
 func tableSeparator(cols []FieldConfig) {
 	fmt.Println(col(bgGrey, strings.Repeat(" ", totalWidth(cols))))
 }
@@ -158,11 +166,8 @@ func tableRow(p Project, cols []FieldConfig, even bool) {
 			cell = statusANSI(raw) + padded + reset + bg
 
 		case "Project_published", "Unresponsive_to_transfer_email":
-			// These labels are short; pad manually to ColWidth
-			label := publishedLabel(raw == "true") // or unresponsiveLabel
-			// Strip ANSI to measure real visible length, then right-pad with spaces
-			visible := stripANSI(label)
-			padding := c.ColWidth - len(visible)
+			label := publishedLabel(raw == "true")
+			padding := c.ColWidth - visibleLen(label) // ← visibleLen, pas len
 			if padding < 0 {
 				padding = 0
 			}
