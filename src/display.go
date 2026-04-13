@@ -2,6 +2,7 @@ package src
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -21,6 +22,7 @@ const (
 	bgGrey = "\033[100m"
 )
 
+// col wraps a string in ANSI color codes, or returns it unchanged if color is empty.
 func col(c, s string) string { return c + s + reset }
 
 // ─────────────────────────────────────────────
@@ -63,6 +65,19 @@ func statusColored(status string, width int) string {
 	return col(color, label)
 }
 
+// statusANSI returns only the ANSI color code for a given status string,
+// without any text or padding — used when padding must happen before colorizing.
+func statusANSI(status string) string {
+	switch strings.ToLower(status) {
+	case "ongoing":
+		return yellow
+	case "completed":
+		return green
+	default:
+		return red
+	}
+}
+
 func publishedLabel(pub bool) string {
 	if pub {
 		return col(green, "✔ yes")
@@ -97,12 +112,29 @@ func tableSeparator(cols []FieldConfig) {
 }
 
 func tableHeader(cols []FieldConfig) {
-	fmt.Print(col(bold+bgBlue, " "))
-	fmt.Print(col(bold+bgBlue+white, fmt.Sprintf(" %-*s", pathColWidth, "PATH")))
+	// Build the full header line as a single colored string,
+	// so no stray reset codes break the spacing between columns.
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("%-*s", pathColWidth, "PATH"))
 	for _, c := range cols {
-		fmt.Print(col(bold+bgBlue+white, fmt.Sprintf(" %-*s", c.ColWidth, c.Label)))
+		sb.WriteString(" ")
+		sb.WriteString(fmt.Sprintf("%-*s", c.ColWidth, c.Label))
 	}
-	fmt.Println(reset)
+
+	// Apply color once around the entire padded line
+	fmt.Println(bold + bgBlue + white + " " + sb.String() + reset)
+}
+
+// padPlain pads a plain (uncolored) string to the given width,
+// then wraps the padded result in color codes.
+// This avoids fmt.Printf counting ANSI escape bytes as visible characters.
+func padPlain(s string, width int, color string) string {
+	padded := fmt.Sprintf("%-*s", width, truncate(s, width))
+	if color == "" {
+		return padded
+	}
+	return color + padded + reset
 }
 
 func tableRow(p Project, cols []FieldConfig, even bool) {
@@ -111,19 +143,37 @@ func tableRow(p Project, cols []FieldConfig, even bool) {
 		bg = "\033[48;5;236m"
 	}
 
-	path := truncate(p.Path, pathColWidth)
-	fmt.Printf("%s %-*s", bg, pathColWidth, path)
+	// PATH column: always plain text, no color
+	path := fmt.Sprintf("%-*s", pathColWidth, truncate(p.Path, pathColWidth))
+	fmt.Printf("%s %s", bg, path)
 
 	for _, c := range cols {
 		raw := p.Readme.GetField(c.JSONKey)
-		rendered := renderValue(c, raw)
-		// For plain fields, pad to col width; colored fields carry their own ANSI codes.
+
+		var cell string
 		switch c.JSONKey {
-		case "Project_status", "Project_published":
-			fmt.Printf(" %s%s", rendered, bg)
+		case "Project_status":
+			// Pad first, then colorize — so ANSI bytes never reach %-*s
+			padded := fmt.Sprintf("%-*s", c.ColWidth, truncate(raw, c.ColWidth))
+			cell = statusANSI(raw) + padded + reset + bg
+
+		case "Project_published", "Unresponsive_to_transfer_email":
+			// These labels are short; pad manually to ColWidth
+			label := publishedLabel(raw == "true") // or unresponsiveLabel
+			// Strip ANSI to measure real visible length, then right-pad with spaces
+			visible := stripANSI(label)
+			padding := c.ColWidth - len(visible)
+			if padding < 0 {
+				padding = 0
+			}
+			cell = label + bg + strings.Repeat(" ", padding) + reset
+
 		default:
-			fmt.Printf(" %-*s", c.ColWidth, rendered)
+			// Plain date/string: safe to use %-*s directly
+			cell = fmt.Sprintf("%-*s", c.ColWidth, truncate(raw, c.ColWidth))
 		}
+
+		fmt.Printf(" %s", cell)
 	}
 	fmt.Printf("%s\n", reset)
 }
@@ -139,4 +189,11 @@ func PrintTable(projects []Project, cfg AppConfig) {
 		tableRow(p, cols, i%2 == 0)
 	}
 	tableSeparator(cols)
+}
+
+var ansiRe = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// stripANSI removes ANSI escape codes to get the real visible length of a string.
+func stripANSI(s string) string {
+	return ansiRe.ReplaceAllString(s, "")
 }
