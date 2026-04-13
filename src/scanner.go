@@ -9,11 +9,11 @@ import (
 	"strings"
 )
 
-const readmeFilename = "_readme.json"
+//const readmeFilename = "_readme.json"
 
 // scanProjects walks the root directory up to maxDepth levels deep
 // and collects all _readme.json files it can parse successfully.
-func ScanProjects(root string, maxDepth int) ([]Project, []string) {
+func ScanProjects(root string, maxDepth int, filename string) ([]Project, []string) {
 	var projects []Project
 	var warnings []string
 
@@ -33,7 +33,8 @@ func ScanProjects(root string, maxDepth int) ([]Project, []string) {
 			return nil
 		}
 
-		if d.Name() != readmeFilename {
+		// Only process files matching the configured readme filename
+		if d.Name() != filename {
 			return nil
 		}
 

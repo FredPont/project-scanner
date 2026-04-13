@@ -16,6 +16,7 @@ func main() {
 	root := flag.String("root", ".", "Root directory to scan")
 	maxDepth := flag.Int("depth", 5, "Maximum folder depth (0 = root only)")
 	configPath := flag.String("config", "config.json", "Path to the JSON configuration file")
+	filename := flag.String("filename", "_readme.json", "Name of the readme JSON file to look for")
 
 	// ── Load config (before parsing remaining flags) ──────────────────────────
 	// We do a pre-parse to get -config if supplied, then load the config file,
@@ -109,7 +110,7 @@ Examples:
 	// ── Scan ──────────────────────────────────────────────────────────────────
 	fmt.Printf("\033[36;1m🔍\033[0m Scanning \033[1m%s\033[0m (max depth: %d)…\n", *root, *maxDepth)
 
-	projects, warnings := src.ScanProjects(*root, *maxDepth)
+	projects, warnings := src.ScanProjects(*root, *maxDepth, *filename)
 	for _, w := range warnings {
 		fmt.Printf("\033[33m%s\033[0m\n", w)
 	}
