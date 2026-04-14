@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -22,7 +23,7 @@ func main() {
 	// We do a pre-parse to get -config if supplied, then load the config file,
 	// then register dynamic flags, then do the final parse.
 	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
-	_ = flag.CommandLine.Parse(os.Args[1:]) // first pass — static flags only
+	//_ = flag.CommandLine.Parse(os.Args[1:]) // first pass — static flags only
 
 	cfg, err := src.LoadConfig(*configPath)
 	if err != nil {
@@ -87,6 +88,13 @@ Examples:
 
 	// Second parse — picks up dynamic flags now that they are registered.
 	flag.Parse()
+	// if arg -h, then exit
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			os.Exit(0)
+		}
+		os.Exit(2)
+	}
 
 	// ── Build FilterSet ───────────────────────────────────────────────────────
 	var filterSet src.FilterSet
