@@ -88,6 +88,7 @@ Example:
 | `-depth <n>` | `5` | Maximum folder depth (`0` = root only) |
 | `-config <path>` | `config.json` | Path to the JSON configuration file |
 | `-filename <name>` | `_readme.json` | Name of the metadata file to look for |
+| `-v` | — | Print version and exit |
 | `-h` | — | Print help and exit |
 
 ### Dynamic filter flags
