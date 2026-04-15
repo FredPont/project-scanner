@@ -29,19 +29,28 @@ import (
 )
 
 func main() {
-	const version = "206-04-02" // software version
+	src.EnableANSI()                // activate coulors ANSI on Windows
+	defer src.WaitIfDoubleClicked() // pause if double-clic
+	const version = "2026-04-15"    // software version
 
 	// ── Static flags ──────────────────────────────────────────────────────────
 	root := flag.String("root", ".", "Root directory to scan")
 	maxDepth := flag.Int("depth", 5, "Maximum folder depth (0 = root only)")
 	configPath := flag.String("config", "config.json", "Path to the JSON configuration file")
 	filename := flag.String("filename", "_readme.json", "Name of the readme JSON file to look for")
-
+	showVersion := flag.Bool("version", false, "Print version and exit")
 	// ── Load config (before parsing remaining flags) ──────────────────────────
 	// We do a pre-parse to get -config if supplied, then load the config file,
 	// then register dynamic flags, then do the final parse.
 	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
 	//_ = flag.CommandLine.Parse(os.Args[1:]) // first pass — static flags only
+
+	// Vérify if flag "version" is activated, if yes print version and exit
+	// if *showVersion {
+	// 	fmt.Printf("Version : %s\n", version)
+	// 	//os.Exit(0)
+	// 	return
+	// }
 
 	cfg, err := src.LoadConfig(*configPath)
 	if err != nil {
@@ -112,6 +121,12 @@ Examples:
 			os.Exit(0)
 		}
 		os.Exit(2)
+	}
+
+	if *showVersion {
+		fmt.Printf("Version : %s\n", version)
+		//os.Exit(0)
+		return
 	}
 
 	// ── Build FilterSet ───────────────────────────────────────────────────────

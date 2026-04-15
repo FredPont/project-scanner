@@ -80,17 +80,31 @@ func statusANSI(status string) string {
 
 func publishedLabel(pub bool) string {
 	if pub {
-		return col(green, "✔ yes")
+		return col(green, symOK+"yes")
 	}
-	return col(red, "✘ no")
+	return col(red, symNO+"no")
 }
 
 func unresponsiveLabel(unresponsive bool) string {
 	if unresponsive {
-		return col(red, "✘ yes")
+		return col(red, symNO+"yes")
 	}
-	return col(green, "✔ no")
+	return col(green, symOK+"no")
 }
+
+// func publishedLabel(pub bool) string {
+// 	if pub {
+// 		return col(green, "✔ yes")
+// 	}
+// 	return col(red, "✘ no")
+// }
+
+// func unresponsiveLabel(unresponsive bool) string {
+// 	if unresponsive {
+// 		return col(red, "✘ yes")
+// 	}
+// 	return col(green, "✔ no")
+// }
 
 // ─────────────────────────────────────────────
 // Table layout
