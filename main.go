@@ -19,7 +19,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -29,41 +28,61 @@ import (
 )
 
 func main() {
-	src.EnableANSI()                // activate coulors ANSI on Windows
-	defer src.WaitIfDoubleClicked() // pause if double-clic
-	const version = "2026-04-15"    // software version
+	src.EnableANSI()                // activate ANSI colours on Windows
+	defer src.WaitIfDoubleClicked() // pause if double-clicked
+	const version = "2026-04-16"    // software version
 
-	// ── Static flags ──────────────────────────────────────────────────────────
-	root := flag.String("root", ".", "Root directory to scan")
-	maxDepth := flag.Int("depth", 5, "Maximum folder depth (0 = root only)")
-	configPath := flag.String("config", "config.json", "Path to the JSON configuration file")
-	filename := flag.String("filename", "_readme.json", "Name of the readme JSON file to look for")
-	showVersion := flag.Bool("version", false, "Print version and exit")
-	// ── Load config (before parsing remaining flags) ──────────────────────────
-	// We do a pre-parse to get -config if supplied, then load the config file,
-	// then register dynamic flags, then do the final parse.
-	flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
-	//_ = flag.CommandLine.Parse(os.Args[1:]) // first pass — static flags only
+	// ── Pré-lire -config et -filename sans flag.Parse ─────────────────────
+	// We need the config path before registering flags, so we scan os.Args
+	// manually for -config / --config to avoid a chicken-and-egg problem.
+	configPath := findArg(os.Args[1:], "config", "config.json")
+	filename := findArg(os.Args[1:], "filename", "_readme.json")
 
-	// Vérify if flag "version" is activated, if yes print version and exit
-	// if *showVersion {
-	// 	fmt.Printf("Version : %s\n", version)
-	// 	//os.Exit(0)
-	// 	return
-	// }
-
-	cfg, err := src.LoadConfig(*configPath)
+	// ── Load config early ─────────────────────────────────────────────────
+	cfg, err := src.LoadConfig(configPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "❌ %v\n", err)
 		os.Exit(1)
 	}
 
-	// ── Dynamic flags from config ─────────────────────────────────────────────
+	// ── Register ALL static flags ─────────────────────────────────────────
+	root := flag.String("root", ".", "Root directory to scan")
+	maxDepth := flag.Int("depth", 5, "Maximum folder depth (0 = root only)")
+	flag.String("config", configPath, "Path to the JSON configuration file")
+	flag.String("filename", filename, "Name of the readme JSON file to look for")
+	//showVersion := flag.Bool("v", false, "Print version and exit")
+
+	// // ── First parse: static flags only ───────────────────────────────────────
+	// // ContinueOnError lets us intercept flag.ErrHelp ourselves.
+	// // Unknown flags (dynamic ones, not registered yet) cause an error here —
+	// // we ignore it and continue; they will be resolved in the second parse.
+	// flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
+	// if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+	// 	if errors.Is(err, flag.ErrHelp) {
+	// 		os.Exit(0)
+	// 	}
+	// 	// Unknown dynamic flags — ignore, handled in second parse
+	// }
+
+	// // Version flag — handled before anything else
+	// if *showVersion {
+	// 	fmt.Printf("project-scanner version %s\n", version)
+	// 	return
+	// }
+
+	// // ── Load config (uses -config value from first parse) ─────────────────────
+	// cfg, err := src.LoadConfig(*configPath)
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "❌ %v\n", err)
+	// 	os.Exit(1)
+	// }
+
+	// ── Register dynamic flags from config ────────────────────────────────────
 	// For each filterable field we register one or two flags:
 	//   - date_range → -<slug>-before  and  -<slug>-after
-	//   - exact      → -<slug>
+	//   - exact / contains → -<slug>
 	//
-	// "slug" is the JSON key lowercased with underscores replaced by dashes.
+	// "slug" is the JSON key lowercased with underscores replaced by hyphens.
 
 	type dynFlag struct {
 		field    src.FieldConfig
@@ -90,11 +109,11 @@ func main() {
 		dynFlags = append(dynFlags, df)
 	}
 
-	// Custom usage
+	// ── Custom usage (registered before second parse so -h shows everything) ──
 	flag.Usage = func() {
 		fmt.Fprint(os.Stderr, `
 ╔══════════════════════════════════════════════════════════════╗
-║    Project Scanner v`+version+` - ©Fréderic Pont - Gnu GPL     ║
+║   Project Scanner v`+version+` - ©Frédéric Pont - GNU GPL     ║
 ╚══════════════════════════════════════════════════════════════╝
 
 Usage: project-scanner [options]
@@ -113,21 +132,19 @@ Examples:
 `)
 	}
 
-	// Second parse — picks up dynamic flags now that they are registered.
+	// ── Single parse — all flags known ────────────────────────────────────
 	flag.Parse()
-	// if arg -h, then exit
-	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			os.Exit(0)
-		}
-		os.Exit(2)
-	}
 
-	if *showVersion {
-		fmt.Printf("Version : %s\n", version)
-		//os.Exit(0)
-		return
-	}
+	// // ── Second parse: all flags (static + dynamic) ────────────────────────────
+	// if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+	// 	if errors.Is(err, flag.ErrHelp) {
+	// 		flag.Usage()
+	// 		os.Exit(0)
+	// 	}
+	// 	// gestion of other errors (ex: bad type of flag)
+	// 	fmt.Fprintf(os.Stderr, "Erreur: %v\n", err)
+	// 	os.Exit(2)
+	// }
 
 	// ── Build FilterSet ───────────────────────────────────────────────────────
 	var filterSet src.FilterSet
@@ -142,7 +159,6 @@ Examples:
 		case src.FilterContains:
 			ff.Contains = *df.contains
 		}
-		// Only add to the set if at least one value is set
 		if ff.Before != "" || ff.After != "" || ff.Exact != "" || ff.Contains != "" {
 			filterSet = append(filterSet, ff)
 		}
@@ -151,7 +167,7 @@ Examples:
 	// ── Scan ──────────────────────────────────────────────────────────────────
 	fmt.Printf("\033[36;1m🔍\033[0m Scanning \033[1m%s\033[0m (max depth: %d)…\n", *root, *maxDepth)
 
-	projects, warnings := src.ScanProjects(*root, *maxDepth, *filename)
+	projects, warnings := src.ScanProjects(*root, *maxDepth, filename)
 	for _, w := range warnings {
 		fmt.Printf("\033[33m%s\033[0m\n", w)
 	}
@@ -169,4 +185,21 @@ Examples:
 	// ── Render ────────────────────────────────────────────────────────────────
 	src.PrintTable(filtered, cfg)
 	fmt.Printf("\n\033[1m%d result(s)\033[0m\n", len(filtered))
+}
+
+// findArg scans args for -name=value or -name value, returning defaultVal if absent.
+func findArg(args []string, name, defaultVal string) string {
+	for i, a := range args {
+		// Handle -name=value and --name=value
+		for _, prefix := range []string{"-" + name + "=", "--" + name + "="} {
+			if strings.HasPrefix(a, prefix) {
+				return strings.TrimPrefix(a, prefix)
+			}
+		}
+		// Handle -name value and --name value
+		if (a == "-"+name || a == "--"+name) && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return defaultVal
 }
