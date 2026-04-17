@@ -50,32 +50,7 @@ func main() {
 	maxDepth := flag.Int("depth", 5, "Maximum folder depth (0 = root only)")
 	flag.String("config", configPath, "Path to the JSON configuration file")
 	flag.String("filename", filename, "Name of the readme JSON file to look for")
-	//showVersion := flag.Bool("v", false, "Print version and exit")
-
-	// // ── First parse: static flags only ───────────────────────────────────────
-	// // ContinueOnError lets us intercept flag.ErrHelp ourselves.
-	// // Unknown flags (dynamic ones, not registered yet) cause an error here —
-	// // we ignore it and continue; they will be resolved in the second parse.
-	// flag.CommandLine.Init(os.Args[0], flag.ContinueOnError)
-	// if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
-	// 	if errors.Is(err, flag.ErrHelp) {
-	// 		os.Exit(0)
-	// 	}
-	// 	// Unknown dynamic flags — ignore, handled in second parse
-	// }
-
-	// // Version flag — handled before anything else
-	// if *showVersion {
-	// 	fmt.Printf("project-scanner version %s\n", version)
-	// 	return
-	// }
-
-	// // ── Load config (uses -config value from first parse) ─────────────────────
-	// cfg, err := src.LoadConfig(*configPath)
-	// if err != nil {
-	// 	fmt.Fprintf(os.Stderr, "❌ %v\n", err)
-	// 	os.Exit(1)
-	// }
+	showVersion := flag.Bool("v", false, "Print version and exit")
 
 	// ── Register dynamic flags from config ────────────────────────────────────
 	// For each filterable field we register one or two flags:
@@ -134,6 +109,12 @@ Examples:
 
 	// ── Single parse — all flags known ────────────────────────────────────
 	flag.Parse()
+
+	// Version flag — handled before anything else
+	if *showVersion {
+		fmt.Printf("project-scanner version %s\n", version)
+		return
+	}
 
 	// // ── Second parse: all flags (static + dynamic) ────────────────────────────
 	// if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
