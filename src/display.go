@@ -37,40 +37,6 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen-1] + "…"
 }
 
-// renderValue applies visual formatting depending on the field type/key.
-// func renderValue(cfg FieldConfig, raw string) string {
-// 	switch cfg.JSONKey {
-// 	case "Project_status":
-// 		return statusColored(raw, cfg.ColWidth)
-// 	case "Project_published":
-// 		return publishedLabel(raw == "true")
-// 	case "Unresponsive_to_transfer_email":
-// 		return unresponsiveLabel(raw == "true")
-// 	case "transfert_data":
-// 		return statusColored(raw, cfg.ColWidth)
-// 	default:
-// 		return truncate(raw, cfg.ColWidth)
-// 	}
-// }
-
-// func statusColored(status string, width int) string {
-// 	var color string
-// 	switch strings.ToLower(status) {
-// 	case "ongoing":
-// 		color = yellow
-// 	case "completed":
-// 		color = green
-// 	case "non":
-// 		color = red
-// 	case "partiel":
-// 		color = yellow
-// 	default:
-// 		color = red
-// 	}
-// 	label := truncate(status, width)
-// 	return col(color, label)
-// }
-
 // statusANSI returns only the ANSI color code for a given status string,
 // without any text or padding — used when padding must happen before colorizing.
 func statusANSI(status string) string {
@@ -79,8 +45,6 @@ func statusANSI(status string) string {
 		return yellow
 	case "completed":
 		return green
-	case "non":
-		return red
 	case "partiel":
 		return yellow
 	case "complet":
@@ -103,20 +67,6 @@ func unresponsiveLabel(unresponsive bool) string {
 	}
 	return col(green, symOK+"no")
 }
-
-// func publishedLabel(pub bool) string {
-// 	if pub {
-// 		return col(green, "✔ yes")
-// 	}
-// 	return col(red, "✘ no")
-// }
-
-// func unresponsiveLabel(unresponsive bool) string {
-// 	if unresponsive {
-// 		return col(red, "✘ yes")
-// 	}
-// 	return col(green, "✔ no")
-// }
 
 // ─────────────────────────────────────────────
 // Table layout

@@ -30,7 +30,7 @@ import (
 func main() {
 	src.EnableANSI()                // activate ANSI colours on Windows
 	defer src.WaitIfDoubleClicked() // pause if double-clicked
-	const version = "2026-04-16"    // software version
+	const version = "2026-04-17"    // software version
 
 	// ── Pré-lire -config et -filename sans flag.Parse ─────────────────────
 	// We need the config path before registering flags, so we scan os.Args
