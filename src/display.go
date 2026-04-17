@@ -38,32 +38,38 @@ func truncate(s string, maxLen int) string {
 }
 
 // renderValue applies visual formatting depending on the field type/key.
-func renderValue(cfg FieldConfig, raw string) string {
-	switch cfg.JSONKey {
-	case "Project_status":
-		return statusColored(raw, cfg.ColWidth)
-	case "Project_published":
-		return publishedLabel(raw == "true")
-	case "Unresponsive_to_transfer_email":
-		return unresponsiveLabel(raw == "true")
-	default:
-		return truncate(raw, cfg.ColWidth)
-	}
-}
+// func renderValue(cfg FieldConfig, raw string) string {
+// 	switch cfg.JSONKey {
+// 	case "Project_status":
+// 		return statusColored(raw, cfg.ColWidth)
+// 	case "Project_published":
+// 		return publishedLabel(raw == "true")
+// 	case "Unresponsive_to_transfer_email":
+// 		return unresponsiveLabel(raw == "true")
+// 	case "transfert_data":
+// 		return statusColored(raw, cfg.ColWidth)
+// 	default:
+// 		return truncate(raw, cfg.ColWidth)
+// 	}
+// }
 
-func statusColored(status string, width int) string {
-	var color string
-	switch strings.ToLower(status) {
-	case "ongoing":
-		color = yellow
-	case "completed":
-		color = green
-	default:
-		color = red
-	}
-	label := truncate(status, width)
-	return col(color, label)
-}
+// func statusColored(status string, width int) string {
+// 	var color string
+// 	switch strings.ToLower(status) {
+// 	case "ongoing":
+// 		color = yellow
+// 	case "completed":
+// 		color = green
+// 	case "non":
+// 		color = red
+// 	case "partiel":
+// 		color = yellow
+// 	default:
+// 		color = red
+// 	}
+// 	label := truncate(status, width)
+// 	return col(color, label)
+// }
 
 // statusANSI returns only the ANSI color code for a given status string,
 // without any text or padding — used when padding must happen before colorizing.
@@ -72,6 +78,12 @@ func statusANSI(status string) string {
 	case "ongoing":
 		return yellow
 	case "completed":
+		return green
+	case "non":
+		return red
+	case "partiel":
+		return yellow
+	case "complet":
 		return green
 	default:
 		return red
@@ -174,7 +186,7 @@ func tableRow(p Project, cols []FieldConfig, even bool) {
 
 		var cell string
 		switch c.JSONKey {
-		case "Project_status":
+		case "Project_status", "transfert_data":
 			// Pad first, then colorize — so ANSI bytes never reach %-*s
 			padded := fmt.Sprintf("%-*s", c.ColWidth, truncate(raw, c.ColWidth))
 			cell = statusANSI(raw) + padded + reset + bg
