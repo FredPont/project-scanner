@@ -143,29 +143,64 @@ The configuration file controls which fields are shown as table columns and whic
 ```json
 {
   "fields": [
-    {
-      "json_key":      "End_Date",
-      "label":         "END",
-      "type":          "date",
-      "filter":        "date_range",
+     {
+      "json_key": "Dataset_title",
+      "label": "Title",
+      "type": "string",
+      "filter": "contains",
       "show_in_table": true,
-      "col_width":     12
+      "col_width": 12
     },
     {
-      "json_key":      "Project_status",
-      "label":         "STATUS",
-      "type":          "string",
-      "filter":        "exact",
+      "json_key": "Start_Date",
+      "label": "START",
+      "type": "date",
+      "filter": "none",
       "show_in_table": true,
-      "col_width":     12
+      "col_width": 12
     },
     {
-      "json_key":      "Dataset_title",
-      "label":         "TITLE",
-      "type":          "string",
-      "filter":        "contains",
+      "json_key": "End_Date",
+      "label": "END",
+      "type": "date",
+      "filter": "date_range",
       "show_in_table": true,
-      "col_width":     30
+      "col_width": 12
+    },
+    {
+      "json_key": "All_Data_transfered",
+      "label": "TRANSFER",
+      "type": "date",
+      "filter": "date_range",
+      "show_in_table": true,
+      "col_width": 12
+    },
+    {
+      "json_key": "Project_status",
+      "label": "STATUS",
+      "type": "string",
+      "filter": "exact",
+      "show_in_table": true,
+      "col_width": 12,
+      "render": "status",
+      "color_map": {
+        "completed": "green",
+        "ongoing": "yellow",
+        "partiel": "yellow",
+        "en cours": "yellow",
+        "complet": "green",
+        "oui": "green",
+        "non": "red"
+      }
+    },
+    {
+      "json_key": "Project_published",
+      "label": "PUBLISHED",
+      "type": "bool",
+      "filter": "exact",
+      "show_in_table": true,
+      "col_width": 10,
+      "render": "boolean"
     }
   ]
 }
