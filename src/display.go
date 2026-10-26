@@ -47,7 +47,11 @@ func statusANSI(status string) string {
 		return green
 	case "partiel":
 		return yellow
+	case "en cours":
+		return yellow
 	case "complet":
+		return green
+	case "oui":
 		return green
 	default:
 		return red
@@ -136,14 +140,14 @@ func tableRow(p Project, cols []FieldConfig, even bool) {
 
 		var cell string
 		switch c.JSONKey {
-		case "Project_status", "transfert_data":
+		case "Project_status", "transfert_data", "facturation": // <- Placez "facturation" ici
 			// Pad first, then colorize — so ANSI bytes never reach %-*s
 			padded := fmt.Sprintf("%-*s", c.ColWidth, truncate(raw, c.ColWidth))
 			cell = statusANSI(raw) + padded + reset + bg
 
-		case "Project_published", "Unresponsive_to_transfer_email":
+		case "Project_published", "Unresponsive_to_transfer_email": // <- Ne le mettez plus ici
 			label := publishedLabel(raw == "true")
-			padding := c.ColWidth - visibleLen(label) // ← visibleLen, pas len
+			padding := c.ColWidth - visibleLen(label)
 			if padding < 0 {
 				padding = 0
 			}
