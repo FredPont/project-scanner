@@ -28,25 +28,14 @@ const (
 // FieldConfig describes one field of _readme.json, controlling both filtering
 // and display behaviour.
 type FieldConfig struct {
-	// JSONKey is the exact key used in _readme.json (e.g. "End_Date").
-	JSONKey string `json:"json_key"`
-
-	// Label is the column header shown in the table.
-	Label string `json:"label"`
-
-	// Type is the data type: "date" | "string" | "bool".
-	Type FieldType `json:"type"`
-
-	// Filter controls how this field can be filtered from the CLI.
-	// "none" | "exact" | "date_range"
-	Filter FilterMode `json:"filter"`
-
-	// ShowInTable controls whether this field appears as a column.
-	ShowInTable bool `json:"show_in_table"`
-
-	// ColWidth is the display width (in characters) for this column.
-	// Used only when ShowInTable is true.
-	ColWidth int `json:"col_width"`
+	JSONKey     string            `json:"json_key"`
+	Label       string            `json:"label"`
+	Type        FieldType         `json:"type"`
+	Filter      FilterMode        `json:"filter"`
+	ShowInTable bool              `json:"show_in_table"`
+	ColWidth    int               `json:"col_width"`
+	Render      string            `json:"render,omitempty"`
+	ColorMap    map[string]string `json:"color_map,omitempty"`
 }
 
 // AppConfig is the root structure of config.json.
@@ -55,13 +44,28 @@ type AppConfig struct {
 	Fields []FieldConfig `json:"fields"`
 }
 
-// DefaultConfig returns a sensible default configuration that reproduces
-// the original hard-coded behaviour.
+// DefaultConfig returns a sensible default configuration matching your project fields.
 func DefaultConfig() AppConfig {
 	return AppConfig{
 		Fields: []FieldConfig{
 			{
-				JSONKey:     "Start_Date",
+				JSONKey:     "code_projet",
+				Label:       "Title",
+				Type:        FieldTypeString,
+				Filter:      FilterContains,
+				ShowInTable: true,
+				ColWidth:    25,
+			},
+			{
+				JSONKey:     "commenditaire",
+				Label:       "Client",
+				Type:        FieldTypeString,
+				Filter:      FilterContains,
+				ShowInTable: true,
+				ColWidth:    25,
+			},
+			{
+				JSONKey:     "date_debut",
 				Label:       "START",
 				Type:        FieldTypeDate,
 				Filter:      FilterNone,
@@ -69,7 +73,7 @@ func DefaultConfig() AppConfig {
 				ColWidth:    12,
 			},
 			{
-				JSONKey:     "End_Date",
+				JSONKey:     "date_fin",
 				Label:       "END",
 				Type:        FieldTypeDate,
 				Filter:      FilterDateRange,
@@ -77,28 +81,34 @@ func DefaultConfig() AppConfig {
 				ColWidth:    12,
 			},
 			{
-				JSONKey:     "All_Data_transfered",
+				JSONKey:     "transfert_data",
 				Label:       "TRANSFER",
-				Type:        FieldTypeDate,
-				Filter:      FilterDateRange,
-				ShowInTable: true,
-				ColWidth:    12,
-			},
-			{
-				JSONKey:     "Project_status",
-				Label:       "STATUS",
 				Type:        FieldTypeString,
-				Filter:      FilterExact,
+				Filter:      FilterContains,
 				ShowInTable: true,
 				ColWidth:    12,
+				Render:      "status",
+				ColorMap: map[string]string{
+					"oui":      "green",
+					"en cours": "yellow",
+					"non":      "red",
+				},
 			},
 			{
-				JSONKey:     "Project_published",
-				Label:       "PUBLISHED",
-				Type:        FieldTypeBool,
-				Filter:      FilterExact,
+				JSONKey:     "facturation",
+				Label:       "FACTURATION",
+				Type:        FieldTypeString,
+				Filter:      FilterContains,
 				ShowInTable: true,
-				ColWidth:    10,
+				ColWidth:    12,
+				Render:      "status",
+				ColorMap: map[string]string{
+					"oui":      "green",
+					"complet":  "green",
+					"en cours": "yellow",
+					"partiel":  "yellow",
+					"non":      "red",
+				},
 			},
 		},
 	}

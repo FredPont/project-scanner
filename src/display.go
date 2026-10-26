@@ -25,6 +25,24 @@ const (
 // col wraps a string in ANSI color codes, or returns it unchanged if color is empty.
 func col(c, s string) string { return c + s + reset }
 
+// getANSIColor convertit un nom de couleur textuel (provenant du JSON) en code ANSI réel.
+func getANSIColor(colorName string) string {
+	switch strings.ToLower(colorName) {
+	case "green":
+		return green
+	case "yellow":
+		return yellow
+	case "cyan":
+		return cyan
+	case "white":
+		return white
+	case "red":
+		return red
+	default:
+		return red // Rouge par défaut si non spécifié ou inconnu
+	}
+}
+
 // ─────────────────────────────────────────────
 // Field rendering helpers
 // ─────────────────────────────────────────────
@@ -35,27 +53,6 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen-1] + "…"
-}
-
-// statusANSI returns only the ANSI color code for a given status string,
-// without any text or padding — used when padding must happen before colorizing.
-func statusANSI(status string) string {
-	switch strings.ToLower(status) {
-	case "ongoing":
-		return yellow
-	case "completed":
-		return green
-	case "partiel":
-		return yellow
-	case "en cours":
-		return yellow
-	case "complet":
-		return green
-	case "oui":
-		return green
-	default:
-		return red
-	}
 }
 
 func publishedLabel(pub bool) string {
@@ -114,17 +111,6 @@ func tableHeader(cols []FieldConfig) {
 	fmt.Println(bold + bgBlue + white + " " + sb.String() + reset)
 }
 
-// padPlain pads a plain (uncolored) string to the given width,
-// then wraps the padded result in color codes.
-// This avoids fmt.Printf counting ANSI escape bytes as visible characters.
-func padPlain(s string, width int, color string) string {
-	padded := fmt.Sprintf("%-*s", width, truncate(s, width))
-	if color == "" {
-		return padded
-	}
-	return color + padded + reset
-}
-
 func tableRow(p Project, cols []FieldConfig, even bool) {
 	bg := ""
 	if !even {
@@ -139,13 +125,20 @@ func tableRow(p Project, cols []FieldConfig, even bool) {
 		raw := p.Readme.GetField(c.JSONKey)
 
 		var cell string
-		switch c.JSONKey {
-		case "Project_status", "transfert_data", "facturation": // <- Placez "facturation" ici
-			// Pad first, then colorize — so ANSI bytes never reach %-*s
+		switch c.Render {
+		case "status":
+			// Rendu piloté dynamiquement par le JSON (color_map)
 			padded := fmt.Sprintf("%-*s", c.ColWidth, truncate(raw, c.ColWidth))
-			cell = statusANSI(raw) + padded + reset + bg
 
-		case "Project_published", "Unresponsive_to_transfer_email": // <- Ne le mettez plus ici
+			colorCode := red // Couleur par défaut si la valeur n'est pas dans la map
+			if c.ColorMap != nil {
+				if colName, ok := c.ColorMap[strings.ToLower(raw)]; ok {
+					colorCode = getANSIColor(colName)
+				}
+			}
+			cell = colorCode + padded + reset + bg
+
+		case "boolean":
 			label := publishedLabel(raw == "true")
 			padding := c.ColWidth - visibleLen(label)
 			if padding < 0 {
